@@ -596,6 +596,7 @@ export default function Home() {
           
           if (saveRes.ok) {
             setCategoryBulkLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] SUCCESS - Saved ${cat.name} SEO.`]);
+            setCategories(prev => prev.map(pc => pc.id === cat.id ? updatedCat : pc));
           } else {
             setCategoryBulkLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ERROR - Failed to save ${cat.name} to DB.`]);
           }
@@ -634,7 +635,7 @@ export default function Home() {
 
     // Filter to fill only the basics (missing optimizations) for selected language
     gamesToProcess = gamesToProcess.filter(g => {
-      const isOptimizedEn = g.seo_keywords && g.seo_keywords.length > 20;
+      const isOptimizedEn = g.description && g.description.length > 20 && g.seo_keywords && g.seo_keywords.length > 10;
       const isOptimizedFr = g.description_fr && g.description_fr.length > 20 && g.description_fr !== g.description;
       const isOptimizedEs = g.description_es && g.description_es.length > 20 && g.description_es !== g.description;
 
@@ -680,7 +681,7 @@ export default function Home() {
         });
         const data = await res.json();
         if (data.success) {
-          const isOptimizedEn = game.seo_keywords && game.seo_keywords.length > 20;
+          const isOptimizedEn = game.description && game.description.length > 20 && game.seo_keywords && game.seo_keywords.length > 10;
           const isOptimizedFr = game.description_fr && game.description_fr.length > 20 && game.description_fr !== game.description;
           const isOptimizedEs = game.description_es && game.description_es.length > 20 && game.description_es !== game.description;
 
@@ -713,6 +714,7 @@ export default function Home() {
           
           if (saveRes.ok) {
             setGameBulkLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] SUCCESS - Saved ${game.title} SEO.`]);
+            setGames(prev => prev.map(pg => pg.id === game.id ? updatedGame : pg));
           } else {
             setGameBulkLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ERROR - Failed to save ${game.title} to DB.`]);
           }
@@ -1067,7 +1069,7 @@ export default function Home() {
                           (game.description && game.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = categoryFilter === "all" || game.category === categoryFilter;
     
-    const isOptimizedEn = game.seo_keywords && game.seo_keywords.length > 20;
+    const isOptimizedEn = game.description && game.description.length > 20 && game.seo_keywords && game.seo_keywords.length > 10;
     const isOptimizedFr = game.description_fr && game.description_fr.length > 20 && game.description_fr !== game.description;
     const isOptimizedEs = game.description_es && game.description_es.length > 20 && game.description_es !== game.description;
 
@@ -1717,7 +1719,7 @@ export default function Home() {
                             <div className="flex flex-col gap-1 text-xs">
                               <span className="flex items-center gap-1">
                                 <span className="font-semibold w-6">EN:</span>
-                                {game.seo_keywords && game.seo_keywords.length > 20 ? (
+                                {game.description && game.description.length > 20 && game.seo_keywords && game.seo_keywords.length > 10 ? (
                                   <span className="text-green-600 font-medium">✅ Optimized</span>
                                 ) : (
                                   <span className="text-yellow-600 font-medium">⚠️ Basic</span>
