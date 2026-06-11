@@ -1,4 +1,5 @@
 import { insertGame, exportToMainSite } from './src/lib/db';
+import { sanitizePokiKeywords } from './src/lib/scraper';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -161,23 +162,27 @@ async function main() {
       gameDescription += `\n\nHow to play:\n${gmGame.instructions}`;
     }
 
-    // Build Game object matching DB structure
+    // Build Game object matching DB structure with Poki sanitization
+    const cleanTitle = sanitizePokiKeywords(gmGame.title);
+    const cleanDesc = sanitizePokiKeywords(gameDescription);
+    const cleanKeywords = sanitizePokiKeywords(gmGame.tags || '');
+
     const gameData = {
       id: `gm-${gmGame.id}`,
-      title: gmGame.title,
-      title_fr: gmGame.title, // Fallback to English title
-      title_es: gmGame.title, // Fallback to English title
+      title: cleanTitle,
+      title_fr: cleanTitle,
+      title_es: cleanTitle,
       slug: gameSlug,
-      description: gameDescription,
-      description_fr: gameDescription, // Fallback to English description
-      description_es: gameDescription, // Fallback to English description
+      description: cleanDesc,
+      description_fr: cleanDesc,
+      description_es: cleanDesc,
       thumbnail: gmGame.thumb || '',
       category: mappedCategory,
       source_url: gmGame.url,
       iframe_url: gmGame.url,
-      seo_keywords: gmGame.tags || '',
-      seo_keywords_fr: gmGame.tags || '',
-      seo_keywords_es: gmGame.tags || '',
+      seo_keywords: cleanKeywords,
+      seo_keywords_fr: cleanKeywords,
+      seo_keywords_es: cleanKeywords,
       description_source: 'gamemonetize'
     };
 

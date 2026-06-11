@@ -11,7 +11,7 @@ export async function GET() {
     const geminiKey = getSetting('gemini_api_key') || '';
     const siteName = getSetting('site_name') || 'ULTI GRAVITY';
     const siteLogo = getSetting('site_logo') || '';
-    const usePokiDescription = getSetting('use_poki_description') || 'false';
+    const useOriginalDescription = getSetting('use_original_description') || 'false';
     const promptCategoryManager = getSetting('prompt_category_manager') || DEFAULT_PROMPT_CATEGORY_MANAGER;
     const promptCategories = getSetting('prompt_categories') || DEFAULT_PROMPT_CATEGORIES;
     const promptGames = getSetting('prompt_games') || DEFAULT_PROMPT_GAMES;
@@ -27,7 +27,7 @@ export async function GET() {
         gemini_api_key: geminiKey,
         site_name: siteName,
         site_logo: siteLogo,
-        use_poki_description: usePokiDescription,
+        use_original_description: useOriginalDescription,
         prompt_category_manager: promptCategoryManager,
         prompt_categories: promptCategories,
         prompt_games: promptGames,

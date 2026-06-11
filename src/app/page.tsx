@@ -98,7 +98,7 @@ export default function Home() {
   });
   const [scrapeAllLogs, setScrapeAllLogs] = useState("");
   const [isScrapingAll, setIsScrapingAll] = useState(false);
-  const [usePokiDescription, setUsePokiDescription] = useState(false);
+  const [useOriginalDescription, setUseOriginalDescription] = useState(false);
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState("");
@@ -146,7 +146,7 @@ export default function Home() {
         if (data.settings.gemini_api_key) setGeminiKey(data.settings.gemini_api_key);
         if (data.settings.site_name) setSiteName(data.settings.site_name);
         if (data.settings.site_logo) setSiteLogo(data.settings.site_logo);
-        setUsePokiDescription(data.settings.use_poki_description === "true");
+        setUseOriginalDescription(data.settings.use_original_description === "true");
         if (data.settings.prompt_category_manager) setPromptCategoryManager(data.settings.prompt_category_manager);
         if (data.settings.prompt_categories) setPromptCategories(data.settings.prompt_categories);
         if (data.settings.prompt_games) setPromptGames(data.settings.prompt_games);
@@ -258,7 +258,7 @@ export default function Home() {
       await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "use_poki_description", value: usePokiDescription ? "true" : "false" }),
+        body: JSON.stringify({ key: "use_original_description", value: useOriginalDescription ? "true" : "false" }),
       });
       await fetch("/api/settings", {
         method: "POST",
@@ -2025,8 +2025,8 @@ export default function Home() {
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input 
                       type="checkbox"
-                      checked={usePokiDescription}
-                      onChange={(e) => setUsePokiDescription(e.target.checked)}
+                      checked={useOriginalDescription}
+                      onChange={(e) => setUseOriginalDescription(e.target.checked)}
                       className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
                     <div>
