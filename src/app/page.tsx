@@ -1095,12 +1095,12 @@ export default function Home() {
                   <h3 className="text-lg font-semibold text-gray-800">Scrape Single Game</h3>
                   <form onSubmit={handleScrape} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Game URL (e.g. from Poki)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Game URL (e.g. from Game Monetize)</label>
                       <input
                         type="url"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
-                        placeholder="https://poki.com/en/g/subway-surfers"
+                        placeholder="https://gamemonetize.com/sky-gardens-siege"
                         className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
@@ -1150,7 +1150,7 @@ export default function Home() {
                   </div>
                   
                   <p className="text-sm text-gray-600">
-                    Crawls all categories in the database, extracts games from Poki, translates them into English, French, and Spanish, and avoids duplicates. Supports pausing and resuming.
+                    Syncs the HTML5 game catalog from the Game Monetize JSON feed API, automatically maps games to existing categories, translates metadata into English, French, and Spanish, and exports them to the main website.
                   </p>
 
                   <div className="flex flex-col sm:flex-row gap-3">
@@ -2030,9 +2030,9 @@ export default function Home() {
                       className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
                     <div>
-                      <span className="block text-sm font-bold text-gray-800">Use Original Poki Descriptions</span>
+                      <span className="block text-sm font-bold text-gray-800">Use Original Game Descriptions (Game Monetize)</span>
                       <span className="block text-xs text-gray-500 mt-0.5">
-                        If checked, the original description from Poki is kept and simply translated to FR/ES (saving Gemini tokens). If unchecked, Gemini rewrites the description for SEO ("rule write").
+                        If checked, the original description and instructions from the Game Monetize feed are kept and translated to FR/ES (saving Gemini tokens). If unchecked, Gemini rewrites the description for SEO.
                       </span>
                     </div>
                   </label>

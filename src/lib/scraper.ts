@@ -378,7 +378,7 @@ TITLE_ES:
       seo_keywords: seoKeywords,
       seo_keywords_fr: seoKeywordsFr || undefined,
       seo_keywords_es: seoKeywordsEs || undefined,
-      description_source: usePokiDescription ? 'poki' : 'rewritten'
+      description_source: usePokiDescription ? 'gamemonetize' : 'rewritten'
     });
 
     console.log(`Successfully saved game: ${title}`);
