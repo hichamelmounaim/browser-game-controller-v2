@@ -13,7 +13,13 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, slug, thumbnail, seo_title, seo_description, seo_keywords, content_unit } = body;
+    const { 
+      name, slug, thumbnail, 
+      seo_title, seo_title_fr, seo_title_es, 
+      seo_description, seo_description_fr, seo_description_es, 
+      seo_keywords, seo_keywords_fr, seo_keywords_es, 
+      content_unit, content_unit_fr, content_unit_es 
+    } = body;
     
     if (!name || !slug) {
       return NextResponse.json({ success: false, error: 'Name and slug are required' }, { status: 400 });
@@ -27,9 +33,17 @@ export async function POST(request: Request) {
       slug,
       thumbnail: thumbnail || '',
       seo_title: seo_title || '',
+      seo_title_fr: seo_title_fr || '',
+      seo_title_es: seo_title_es || '',
       seo_description: seo_description || '',
+      seo_description_fr: seo_description_fr || '',
+      seo_description_es: seo_description_es || '',
       seo_keywords: seo_keywords || '',
-      content_unit: content_unit || ''
+      seo_keywords_fr: seo_keywords_fr || '',
+      seo_keywords_es: seo_keywords_es || '',
+      content_unit: content_unit || '',
+      content_unit_fr: content_unit_fr || '',
+      content_unit_es: content_unit_es || ''
     });
 
     return NextResponse.json({ success: true, message: 'Category created successfully' });
