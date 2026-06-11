@@ -1,0 +1,11 @@
+{
+  "status": "completed",
+  "currentCategory": "Finished",
+  "processedCategories": 1,
+  "totalCategories": 1,
+  "scrapedGamesCount": 2000,
+  "completedCategories": [
+    "all"
+  ],
+  "currentAction": "Process completed successfully! Imported 2000 games."
+}
