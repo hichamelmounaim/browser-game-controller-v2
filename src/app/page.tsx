@@ -95,7 +95,7 @@ export default function Home() {
   const [gameBulkProgressText, setGameBulkProgressText] = useState("");
   const [gameBulkLog, setGameBulkLog] = useState<string[]>([]);
   const [gameBulkIsStopped, setGameBulkIsStopped] = useState(false);
-  const [skipOptimizedGames, setSkipOptimizedGames] = useState(true);
+  const [bulkTargetLang, setBulkTargetLang] = useState("all_missing");
   const stopGameBulkRef = useRef(false);
 
   // Scraper status state
@@ -632,9 +632,18 @@ export default function Home() {
       return;
     }
 
-    if (skipOptimizedGames) {
-      gamesToProcess = gamesToProcess.filter(g => !(g.seo_keywords && g.seo_keywords.length > 20));
-    }
+    // Filter to fill only the basics (missing optimizations) for selected language
+    gamesToProcess = gamesToProcess.filter(g => {
+      const isOptimizedEn = g.seo_keywords && g.seo_keywords.length > 20;
+      const isOptimizedFr = g.description_fr && g.description_fr.length > 20 && g.description_fr !== g.description;
+      const isOptimizedEs = g.description_es && g.description_es.length > 20 && g.description_es !== g.description;
+
+      if (bulkTargetLang === "en") return !isOptimizedEn;
+      if (bulkTargetLang === "fr") return !isOptimizedFr;
+      if (bulkTargetLang === "es") return !isOptimizedEs;
+      if (bulkTargetLang === "all_missing") return !isOptimizedEn || !isOptimizedFr || !isOptimizedEs;
+      return true; // "force_all"
+    });
 
     if (gamesToProcess.length === 0) {
       setMessage("No games to optimize (selected games are already optimized or list is empty).");
@@ -671,16 +680,30 @@ export default function Home() {
         });
         const data = await res.json();
         if (data.success) {
+          const isOptimizedEn = game.seo_keywords && game.seo_keywords.length > 20;
+          const isOptimizedFr = game.description_fr && game.description_fr.length > 20 && game.description_fr !== game.description;
+          const isOptimizedEs = game.description_es && game.description_es.length > 20 && game.description_es !== game.description;
+
           const updatedGame: any = { 
             ...game, 
-            description: data.description, 
-            seo_keywords: data.keywords,
             description_source: 'rewritten'
           };
-          if (data.description_fr) updatedGame.description_fr = data.description_fr;
-          if (data.keywords_fr) updatedGame.seo_keywords_fr = data.keywords_fr;
-          if (data.description_es) updatedGame.description_es = data.description_es;
-          if (data.keywords_es) updatedGame.seo_keywords_es = data.keywords_es;
+
+          // Update EN if targeting EN, all missing, or force all (and it's not optimized or we are forcing)
+          if (bulkTargetLang === "en" || bulkTargetLang === "force_all" || (bulkTargetLang === "all_missing" && !isOptimizedEn)) {
+            updatedGame.description = data.description;
+            updatedGame.seo_keywords = data.keywords;
+          }
+          // Update FR if targeting FR, all missing, or force all (and it's not optimized or we are forcing)
+          if (bulkTargetLang === "fr" || bulkTargetLang === "force_all" || (bulkTargetLang === "all_missing" && !isOptimizedFr)) {
+            if (data.description_fr) updatedGame.description_fr = data.description_fr;
+            if (data.keywords_fr) updatedGame.seo_keywords_fr = data.keywords_fr;
+          }
+          // Update ES if targeting ES, all missing, or force all (and it's not optimized or we are forcing)
+          if (bulkTargetLang === "es" || bulkTargetLang === "force_all" || (bulkTargetLang === "all_missing" && !isOptimizedEs)) {
+            if (data.description_es) updatedGame.description_es = data.description_es;
+            if (data.keywords_es) updatedGame.seo_keywords_es = data.keywords_es;
+          }
 
           const saveRes = await fetch("/api/games", {
             method: "PUT",
@@ -1505,14 +1528,19 @@ export default function Home() {
                     <span className="text-sm font-bold text-purple-900">
                       {selectedGameIds.length} games selected
                     </span>
-                    <label className="inline-flex items-center text-xs text-purple-700 mt-1 select-none cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={skipOptimizedGames}
-                        onChange={(e) => setSkipOptimizedGames(e.target.checked)}
-                        className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 w-3.5 h-3.5 mr-1.5 cursor-pointer"
-                      />
-                      Skip already optimized games
+                    <label className="inline-flex items-center text-xs text-purple-700 mt-1 select-none">
+                      <span className="mr-2 font-bold">Target missing translations for:</span>
+                      <select
+                        value={bulkTargetLang}
+                        onChange={(e) => setBulkTargetLang(e.target.value)}
+                        className="rounded border-purple-300 text-purple-700 focus:ring-purple-500 text-xs py-1 px-2 cursor-pointer bg-white"
+                      >
+                        <option value="all_missing">All Missing Languages (EN/FR/ES)</option>
+                        <option value="en">English (Basic only)</option>
+                        <option value="fr">French (Basic only)</option>
+                        <option value="es">Spanish (Basic only)</option>
+                        <option value="force_all">Force Overwrite All Selected</option>
+                      </select>
                     </label>
                   </div>
                   <button
