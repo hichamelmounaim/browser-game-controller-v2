@@ -303,18 +303,18 @@ export default function Home() {
     }
   };
 
-  const handleStartScrapeAll = async (resume: boolean = false) => {
+  const handleStartScrapeAll = async (resume: boolean = false, provider: string = 'gamemonetize') => {
     const confirmMsg = resume 
-      ? "Are you sure you want to resume the autonomous scraper? It will skip all completed categories and games."
-      : "Are you sure you want to start a fresh autonomous scan? This will reset all completed category tracking.";
+      ? `Are you sure you want to resume the autonomous scraper for ${provider}? It will skip all completed categories and games.`
+      : `Are you sure you want to start a fresh autonomous scan for ${provider}? This will reset all completed category tracking.`;
     if (!confirm(confirmMsg)) return;
     
-    setMessage(resume ? "Resuming autonomous scraper..." : "Starting fresh autonomous scraper...");
+    setMessage(resume ? `Resuming autonomous scraper for ${provider}...` : `Starting fresh autonomous scraper for ${provider}...`);
     try {
       const res = await fetch("/api/scrape-all", { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume })
+        body: JSON.stringify({ resume, provider })
       });
       const data = await res.json();
       if (data.success) {
@@ -1172,39 +1172,44 @@ export default function Home() {
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Scrape Single Game */}
-                <div className="space-y-4 border-r pr-0 lg:pr-8 border-gray-100">
-                  <h3 className="text-lg font-semibold text-gray-800">Scrape Single Game</h3>
-                  <form onSubmit={handleScrape} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Game URL (e.g. from Game Monetize)</label>
-                      <input
-                        type="url"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        placeholder="https://gamemonetize.com/sky-gardens-siege"
-                        className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Target Category</label>
-                      <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <div className="space-y-6 border-r pr-0 lg:pr-8 border-gray-100">
+                  
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <h3 className="text-lg font-bold text-blue-900 mb-2">Scrape Single Game URL</h3>
+                    <p className="text-xs text-blue-700 mb-4">Paste a game URL from <strong>Game Monetize</strong> or <strong>Poki.com</strong> to fetch the free app embedding iframe automatically.</p>
+                    <form onSubmit={handleScrape} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Game URL</label>
+                        <input
+                          type="url"
+                          value={url}
+                          onChange={(e) => setUrl(e.target.value)}
+                          placeholder="e.g. https://gamemonetize.com/... or https://poki.com/en/g/..."
+                          className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Target Category</label>
+                        <select
+                          value={selectedCategory}
+                          onChange={(e) => setSelectedCategory(e.target.value)}
+                          className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded transition disabled:opacity-50 flex items-center justify-center gap-2"
                       >
-                        {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                      </select>
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded transition disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-sm">download</span>
-                      {loading ? "Scraping..." : "Start Scraping"}
-                    </button>
-                  </form>
+                        <span className="material-symbols-outlined text-sm">download</span>
+                        {loading ? "Fetching & Scraping..." : "Fetch Game Embed"}
+                      </button>
+                    </form>
+                  </div>
+                  
                 </div>
 
                 {/* Autonomous Fetch All */}
@@ -1246,11 +1251,18 @@ export default function Home() {
                     ) : (
                       <>
                         <button
-                          onClick={() => handleStartScrapeAll(false)}
+                          onClick={() => handleStartScrapeAll(false, 'gamemonetize')}
                           className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-6 rounded shadow transition flex items-center justify-center gap-2"
                         >
                           <span className="material-symbols-outlined text-sm">rocket_launch</span>
-                          Start New Crawl
+                          Start GM Crawl
+                        </button>
+                        <button
+                          onClick={() => handleStartScrapeAll(false, 'poki')}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded shadow transition flex items-center justify-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-sm">rocket_launch</span>
+                          Start Poki Crawl
                         </button>
                         {!isScrapingAll && scrapeAllStatus.status === 'stopped' && (
                           <button
@@ -1258,7 +1270,7 @@ export default function Home() {
                             className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded shadow transition flex items-center justify-center gap-2 animate-pulse"
                           >
                             <span className="material-symbols-outlined text-sm">play_arrow</span>
-                            Resume Crawl
+                            Resume
                           </button>
                         )}
                       </>

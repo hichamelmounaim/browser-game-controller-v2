@@ -1,11 +1,12 @@
 {
-  "status": "completed",
-  "currentCategory": "Finished",
-  "processedCategories": 1,
-  "totalCategories": 1,
-  "scrapedGamesCount": 2000,
+  "status": "stopped",
+  "currentCategory": "Sports",
+  "processedCategories": 3,
+  "totalCategories": 49,
+  "scrapedGamesCount": 155,
   "completedCategories": [
-    "all"
+    "racing",
+    "uncategorized"
   ],
-  "currentAction": "Process completed successfully! Imported 2000 games."
+  "currentAction": "Process stopped by user"
 }

@@ -36,9 +36,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   let resume = false;
+  let provider = 'gamemonetize';
   try {
     const body = await req.json();
     resume = !!body.resume;
+    if (body.provider) provider = body.provider;
   } catch (e) {}
 
   const currentStatus = getStatus();
@@ -81,7 +83,9 @@ export async function POST(req: Request) {
   
   try {
     const cmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-    const args = ['tsx', 'scrape_gamemonetize.ts'];
+    const scriptToRun = provider === 'poki' ? 'scrape_all_poki_games.ts' : 'scrape_gamemonetize.ts';
+    
+    const args = ['tsx', scriptToRun];
     if (resume) {
       args.push('--resume');
     }
