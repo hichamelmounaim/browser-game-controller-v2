@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAllCategories, insertCategory, updateCategory, deleteCategory } from '@/lib/db';
+import { getAllCategories, insertCategory, updateCategory, deleteCategory, exportLocalJSON } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       content_unit_es: content_unit_es || ''
     });
 
+    exportLocalJSON();
     return NextResponse.json({ success: true, message: 'Category created successfully' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -62,6 +63,7 @@ export async function PUT(request: Request) {
     }
 
     updateCategory(body);
+    exportLocalJSON();
     return NextResponse.json({ success: true, message: 'Category updated successfully' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -78,6 +80,7 @@ export async function DELETE(request: Request) {
     }
 
     deleteCategory(id);
+    exportLocalJSON();
     return NextResponse.json({ success: true, message: 'Category deleted successfully' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

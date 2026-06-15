@@ -56,23 +56,49 @@ export const DEFAULT_PROMPT_GAMES = `You are an expert SEO copywriter for a glob
 Game Title: {title}
 Original Description: {description}
 
-Task: Rewrite the game description and generate SEO keywords for English, French, and Spanish.
+Task: Generate rich SEO metadata and content for this game in English, French, and Spanish.
 
 Requirements:
-- Descriptions must be 2-3 short, engaging paragraphs. No HTML.
-- Keywords should be a comma-separated list of 10 terms.
+- SHORT_DESC: 1 or 2 brief sentences (max 150 characters) describing the core gameplay.
+- DESCRIPTION: A detailed description using semantic HTML formatting (no markdown code blocks, just raw HTML). It MUST include specific sections structured with <h3> tags answering: "How to play {title}?", "Who created {title}?", "How can I play {title} for free?", and "Can I play {title} on mobile devices and desktop?". Provide a well-written paragraph for each.
+- KEYWORDS: A comma-separated list of 10 relevant SEO terms.
+- DEVELOPER: The name of the developer/studio (if unknown, infer or use a plausible studio name like "Z & K Games" or "Pixel Studios").
+- CONTROLS: A short description of the controls (e.g., "WASD or arrow keys to move").
+- SUPPORTED_DEVICES: "Desktop, phone and tablet".
+- RELEASE_DATE: A plausible release date (e.g., "March 2024").
 
 Output format EXACTLY:
+DEVELOPER:
+[Developer Name]
+RELEASE_DATE:
+[Release Date]
+SUPPORTED_DEVICES:
+[Supported Devices]
+
+EN_SHORT_DESC:
+[English short description]
+EN_CONTROLS:
+[English controls]
 EN_DESCRIPTION:
-[English rewritten description]
+[English rich HTML description]
 EN_KEYWORDS:
 [English keywords]
+
+FR_SHORT_DESC:
+[French short description]
+FR_CONTROLS:
+[French controls]
 FR_DESCRIPTION:
-[French translated description]
+[French rich HTML description]
 FR_KEYWORDS:
 [French keywords]
+
+ES_SHORT_DESC:
+[Spanish short description]
+ES_CONTROLS:
+[Spanish controls]
 ES_DESCRIPTION:
-[Spanish translated description]
+[Spanish rich HTML description]
 ES_KEYWORDS:
 [Spanish keywords]`;
 

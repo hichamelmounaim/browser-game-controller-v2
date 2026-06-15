@@ -275,6 +275,10 @@ export function updateGame(game: Partial<Game> & { id: string }) {
   return db.prepare(query).run(values);
 }
 
+export function deleteGame(id: string) {
+  return db.prepare('DELETE FROM games WHERE id = ?').run(id);
+}
+
 // Category CRUD Operations
 export function getAllCategories(): Category[] {
   return db.prepare('SELECT * FROM categories ORDER BY name ASC').all() as Category[];
@@ -341,7 +345,7 @@ import { exec } from 'child_process';
 import * as util from 'util';
 const execPromise = util.promisify(exec);
 
-export async function exportToMainSite() {
+export function exportLocalJSON() {
   const games = getAllGames();
   const mainDataPath = path.resolve(process.cwd(), '../browser game v2/data/games.json');
   fs.writeFileSync(mainDataPath, JSON.stringify(games, null, 2));
@@ -374,6 +378,12 @@ export async function exportToMainSite() {
   } catch (settErr) {
     console.error('Failed to export settings:', settErr);
   }
+}
+
+export async function exportToMainSite() {
+  exportLocalJSON();
+
+
 
   // Trigger Git Commit and Push on the main website directory
   try {

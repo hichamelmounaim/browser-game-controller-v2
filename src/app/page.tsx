@@ -12,6 +12,11 @@ export default function Home() {
   
   // Settings state
   const [geminiKey, setGeminiKey] = useState("");
+  const [openrouterKey, setOpenrouterKey] = useState("");
+  const [aiProvider, setAiProvider] = useState("gemini");
+  const [openrouterModel, setOpenrouterModel] = useState("");
+  const [openrouterModels, setOpenrouterModels] = useState<any[]>([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
   const [siteName, setSiteName] = useState("");
   const [siteLogo, setSiteLogo] = useState("");
   const [promptCategoryManager, setPromptCategoryManager] = useState("");
@@ -118,8 +123,14 @@ export default function Home() {
   const [seoFilter, setSeoFilter] = useState("all");
   const [schemaFilter, setSchemaFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("scraper");
+  const [translationFilter, setTranslationFilter] = useState("all");
+  const [descSourceFilter, setDescSourceFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [gamesPerPage, setGamesPerPage] = useState(50);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, seoFilter, schemaFilter, translationFilter, descSourceFilter]);
     fetchSettings();
     fetchGames();
     fetchCategories();
@@ -156,6 +167,9 @@ export default function Home() {
       const data = await res.json();
       if (data.success && data.settings) {
         if (data.settings.gemini_api_key) setGeminiKey(data.settings.gemini_api_key);
+        if (data.settings.openrouter_api_key) setOpenrouterKey(data.settings.openrouter_api_key);
+        if (data.settings.ai_provider) setAiProvider(data.settings.ai_provider);
+        if (data.settings.openrouter_model) setOpenrouterModel(data.settings.openrouter_model);
         if (data.settings.site_name) setSiteName(data.settings.site_name);
         if (data.settings.site_logo) setSiteLogo(data.settings.site_logo);
         setUseOriginalDescription(data.settings.use_original_description === "true");
@@ -260,6 +274,21 @@ export default function Home() {
       await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "openrouter_api_key", value: openrouterKey }),
+      });
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "ai_provider", value: aiProvider }),
+      });
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "openrouter_model", value: openrouterModel }),
+      });
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: "site_name", value: siteName }),
       });
       await fetch("/api/settings", {
@@ -300,6 +329,48 @@ export default function Home() {
       setMessage("Settings saved successfully.");
     } catch (e) {
       setMessage("Failed to save settings.");
+    }
+  };
+
+  const handleDeleteGame = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this game?")) return;
+    try {
+      const res = await fetch(`/api/games?id=${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        setMessage("Game deleted successfully.");
+        fetchGames();
+      } else {
+        setMessage(`Error: ${data.error}`);
+      }
+    } catch (e: any) {
+      setMessage(`Error deleting game: ${e.message}`);
+    }
+  };
+
+  const handleFetchModels = async () => {
+    if (!openrouterKey || openrouterKey === '********') {
+      setMessage("Please enter your actual OpenRouter API key before fetching models, and save settings.");
+      return;
+    }
+    setFetchingModels(true);
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/models", {
+        headers: {
+          "Authorization": `Bearer ${openrouterKey}`
+        }
+      });
+      const data = await res.json();
+      if (data.data) {
+        setOpenrouterModels(data.data);
+        setMessage(`Successfully fetched ${data.data.length} models from OpenRouter.`);
+      } else {
+        setMessage("Failed to fetch models from OpenRouter.");
+      }
+    } catch (e: any) {
+      setMessage(`Error fetching models: ${e.message}`);
+    } finally {
+      setFetchingModels(false);
     }
   };
 
@@ -607,7 +678,7 @@ export default function Home() {
         setCategoryBulkLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] EXCEPTION - ${err.message}`]);
       }
 
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 200));
     }
 
     setIsCategoryBulkRunning(false);
@@ -687,23 +758,32 @@ export default function Home() {
 
           const updatedGame: any = { 
             ...game, 
-            description_source: 'rewritten'
+            description_source: 'rewritten',
+            developer: data.developer || game.developer || "Z & K Games",
+            release_date: data.release_date || game.release_date || "March 2024",
+            supported_devices: data.supported_devices || game.supported_devices || "Desktop, phone and tablet"
           };
 
           // Update EN if targeting EN, all missing, or force all (and it's not optimized or we are forcing)
           if (bulkTargetLang === "en" || bulkTargetLang === "force_all" || (bulkTargetLang === "all_missing" && !isOptimizedEn)) {
             updatedGame.description = data.description;
             updatedGame.seo_keywords = data.keywords;
+            if (data.short_description) updatedGame.short_description = data.short_description;
+            if (data.controls) updatedGame.controls = data.controls;
           }
           // Update FR if targeting FR, all missing, or force all (and it's not optimized or we are forcing)
           if (bulkTargetLang === "fr" || bulkTargetLang === "force_all" || (bulkTargetLang === "all_missing" && !isOptimizedFr)) {
             if (data.description_fr) updatedGame.description_fr = data.description_fr;
             if (data.keywords_fr) updatedGame.seo_keywords_fr = data.keywords_fr;
+            if (data.short_description_fr) updatedGame.short_description_fr = data.short_description_fr;
+            if (data.controls_fr) updatedGame.controls_fr = data.controls_fr;
           }
           // Update ES if targeting ES, all missing, or force all (and it's not optimized or we are forcing)
           if (bulkTargetLang === "es" || bulkTargetLang === "force_all" || (bulkTargetLang === "all_missing" && !isOptimizedEs)) {
             if (data.description_es) updatedGame.description_es = data.description_es;
             if (data.keywords_es) updatedGame.seo_keywords_es = data.keywords_es;
+            if (data.short_description_es) updatedGame.short_description_es = data.short_description_es;
+            if (data.controls_es) updatedGame.controls_es = data.controls_es;
           }
 
           const saveRes = await fetch("/api/games", {
@@ -725,7 +805,7 @@ export default function Home() {
         setGameBulkLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] EXCEPTION - ${err.message}`]);
       }
 
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 200));
     }
 
     setIsGameBulkRunning(false);
@@ -874,12 +954,21 @@ export default function Home() {
       if (res.ok && data.success) {
         setEditingGame({
           ...editingGame,
+          developer: data.developer || editingGame.developer || "Z & K Games",
+          release_date: data.release_date || editingGame.release_date || "March 2024",
+          supported_devices: data.supported_devices || editingGame.supported_devices || "Desktop, phone and tablet",
           description: data.description,
           seo_keywords: data.keywords,
+          short_description: data.short_description || editingGame.short_description || "",
+          controls: data.controls || editingGame.controls || "",
           description_fr: data.description_fr || editingGame.description_fr || "",
           seo_keywords_fr: data.keywords_fr || editingGame.seo_keywords_fr || "",
+          short_description_fr: data.short_description_fr || editingGame.short_description_fr || "",
+          controls_fr: data.controls_fr || editingGame.controls_fr || "",
           description_es: data.description_es || editingGame.description_es || "",
-          seo_keywords_es: data.keywords_es || editingGame.seo_keywords_es || ""
+          seo_keywords_es: data.keywords_es || editingGame.seo_keywords_es || "",
+          short_description_es: data.short_description_es || editingGame.short_description_es || "",
+          controls_es: data.controls_es || editingGame.controls_es || ""
         });
         setMessage("SEO content successfully generated by AI for all languages!");
       } else {
@@ -1088,13 +1177,29 @@ export default function Home() {
       matchesSeo = !isOptimizedEs;
     }
 
+    let matchesTranslation = true;
+    if (translationFilter === "missing_en") matchesTranslation = !isOptimizedEn;
+    else if (translationFilter === "missing_fr") matchesTranslation = !isOptimizedFr;
+    else if (translationFilter === "missing_es") matchesTranslation = !isOptimizedEs;
+    else if (translationFilter === "missing_any") matchesTranslation = !isOptimizedEn || !isOptimizedFr || !isOptimizedEs;
+    else if (translationFilter === "fully_translated") matchesTranslation = isOptimizedEn && isOptimizedFr && isOptimizedEs;
+
+    let matchesDescSource = true;
+    if (descSourceFilter === "original") matchesDescSource = game.description_source === 'original' || !game.description_source;
+    else if (descSourceFilter === "rewritten") matchesDescSource = game.description_source === 'rewritten';
+
     const hasSchema = game.description && game.description.length > 0 && game.rating !== undefined;
     const matchesSchema = schemaFilter === "all" || 
                          (schemaFilter === "active" && hasSchema) || 
                          (schemaFilter === "inactive" && !hasSchema);
 
-    return matchesSearch && matchesCategory && matchesSeo && matchesSchema;
+    return matchesSearch && matchesCategory && matchesSeo && matchesSchema && matchesTranslation && matchesDescSource;
   });
+
+  const totalPages = Math.ceil(filteredGames.length / gamesPerPage);
+  const indexOfLastGame = currentPage * gamesPerPage;
+  const indexOfFirstGame = indexOfLastGame - gamesPerPage;
+  const paginatedGames = filteredGames.slice(indexOfFirstGame, indexOfLastGame);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-8 pb-32">
@@ -1503,13 +1608,37 @@ export default function Home() {
                             </span>
                           </div>
                         </td>
-                        <td className="p-3 space-x-3 text-sm">
+                        <td className="p-3 space-x-3 text-sm flex items-center">
                           <button 
                             onClick={() => setEditingCategory(cat)}
                             className="text-blue-600 hover:text-blue-800 font-medium"
                           >
                             Edit
                           </button>
+                          <a 
+                            href={`http://localhost:3000/en/category/${cat.slug}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="text-emerald-600 hover:text-emerald-800 font-bold px-1"
+                          >
+                            EN
+                          </a>
+                          <a 
+                            href={`http://localhost:3000/fr/category/${cat.slug}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="text-emerald-600 hover:text-emerald-800 font-bold px-1"
+                          >
+                            FR
+                          </a>
+                          <a 
+                            href={`http://localhost:3000/es/category/${cat.slug}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="text-emerald-600 hover:text-emerald-800 font-bold px-1"
+                          >
+                            ES
+                          </a>
                           <button 
                             onClick={() => handleDeleteCategory(cat.id)}
                             className="text-red-600 hover:text-red-800 font-medium"
@@ -1619,14 +1748,14 @@ export default function Home() {
               )}
 
               {/* GAMES FILTERS */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Search Games</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Search</label>
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search title/desc..."
+                    placeholder="Search..."
                     className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
                   />
                 </div>
@@ -1639,7 +1768,7 @@ export default function Home() {
                   >
                     <option value="all">All Categories</option>
                     {Array.from(new Set(games.map(g => g.category || 'Uncategorized'))).map(catName => (
-                      <option key={catName} value={catName}>{catName}</option>
+                      <option key={catName as string} value={catName as string}>{catName as string}</option>
                     ))}
                   </select>
                 </div>
@@ -1660,6 +1789,33 @@ export default function Home() {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Translation</label>
+                  <select
+                    value={translationFilter}
+                    onChange={(e) => setTranslationFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                  >
+                    <option value="all">All Languages</option>
+                    <option value="fully_translated">Fully Translated</option>
+                    <option value="missing_any">Missing Any Translation</option>
+                    <option value="missing_en">Missing EN SEO</option>
+                    <option value="missing_fr">Missing FR Translation</option>
+                    <option value="missing_es">Missing ES Translation</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Desc Source</label>
+                  <select
+                    value={descSourceFilter}
+                    onChange={(e) => setDescSourceFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                  >
+                    <option value="all">All Sources</option>
+                    <option value="original">Original Only</option>
+                    <option value="rewritten">Rewritten by AI</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Schema Status</label>
                   <select
                     value={schemaFilter}
@@ -1667,7 +1823,7 @@ export default function Home() {
                     className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
                   >
                     <option value="all">All Schema Statuses</option>
-                    <option value="active">Active (VideoGame) Only</option>
+                    <option value="active">Active Only</option>
                     <option value="inactive">Inactive Only</option>
                   </select>
                 </div>
@@ -1680,13 +1836,13 @@ export default function Home() {
                       <th className="p-3 text-center w-12">
                         <input 
                           type="checkbox"
-                          checked={filteredGames.length > 0 && filteredGames.every(g => selectedGameIds.includes(g.id))}
+                          checked={paginatedGames.length > 0 && paginatedGames.every(g => selectedGameIds.includes(g.id))}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              const currentIds = filteredGames.map(g => g.id);
+                              const currentIds = paginatedGames.map(g => g.id);
                               setSelectedGameIds(Array.from(new Set([...selectedGameIds, ...currentIds])));
                             } else {
-                              const currentIds = filteredGames.map(g => g.id);
+                              const currentIds = paginatedGames.map(g => g.id);
                               setSelectedGameIds(selectedGameIds.filter(id => !currentIds.includes(id)));
                             }
                           }}
@@ -1702,7 +1858,7 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredGames.map(game => {
+                    {paginatedGames.map(game => {
                       const hasSchema = game.description && game.description.length > 0 && game.rating !== undefined;
                       return (
                         <tr key={game.id} className="border-b hover:bg-gray-50">
@@ -1766,13 +1922,43 @@ export default function Home() {
                               </span>
                             )}
                           </td>
-                          <td className="p-3 text-sm">
+                          <td className="p-3 text-sm space-x-3 flex items-center">
                             <button 
                               onClick={() => setEditingGame(game)}
                               className="text-blue-600 hover:text-blue-800 font-medium"
                             >
                               Edit
                             </button>
+                            <button 
+                              onClick={() => handleDeleteGame(game.id)}
+                              className="text-red-600 hover:text-red-800 font-medium"
+                            >
+                              Delete
+                            </button>
+                            <a 
+                              href={`http://localhost:3000/en/game/${game.slug}`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-emerald-600 hover:text-emerald-800 font-bold px-1"
+                            >
+                              EN
+                            </a>
+                            <a 
+                              href={`http://localhost:3000/fr/game/${game.slug}`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-emerald-600 hover:text-emerald-800 font-bold px-1"
+                            >
+                              FR
+                            </a>
+                            <a 
+                              href={`http://localhost:3000/es/game/${game.slug}`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-emerald-600 hover:text-emerald-800 font-bold px-1"
+                            >
+                              ES
+                            </a>
                           </td>
                         </tr>
                       );
@@ -1787,6 +1973,34 @@ export default function Home() {
                   </tbody>
                 </table>
               </div>
+
+              {/* PAGINATION CONTROLS */}
+              {filteredGames.length > 0 && (
+                <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-4 border border-t-0 border-gray-200 rounded-b-lg mt-0 relative -top-6">
+                  <div className="text-sm text-gray-500 mb-4 sm:mb-0">
+                    Showing <span className="font-bold text-gray-800">{indexOfFirstGame + 1}</span> to <span className="font-bold text-gray-800">{Math.min(indexOfLastGame, filteredGames.length)}</span> of <span className="font-bold text-gray-800">{filteredGames.length}</span> games
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 border border-gray-300 rounded text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-600 font-medium px-2">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1.5 border border-gray-300 rounded text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -1834,13 +2048,14 @@ export default function Home() {
               </div>
 
               {seoActiveTab === "category_manager" && (
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-sm font-bold text-gray-700">Category Copywriting Prompt</label>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Prompt Editor */}
+                  <div className="flex flex-col bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="block text-sm font-bold text-gray-800">1. Edit System Prompt</label>
                       <button
                         onClick={() => handleSavePrompt("prompt_category_manager", promptCategoryManager)}
-                        className="bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold py-1.5 px-4 rounded shadow transition"
+                        className="bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold py-1.5 px-3 rounded shadow transition"
                       >
                         Save Prompt
                       </button>
@@ -1849,52 +2064,83 @@ export default function Home() {
                       value={promptCategoryManager}
                       onChange={(e) => setPromptCategoryManager(e.target.value)}
                       placeholder="System prompt for category copywriting..."
-                      rows={8}
-                      className="w-full border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                      className="w-full flex-grow border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm min-h-[250px]"
                     />
-                    <span className="text-[10.5px] text-gray-400">Use <code>{`{title}`}</code> as a dynamic placeholder for the Category Name.</span>
+                    <span className="text-[10.5px] text-gray-500 mt-2">Use <code>{`{title}`}</code> as a dynamic placeholder for the Category Name.</span>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-100 flex flex-col md:flex-row gap-4 items-end">
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Target Category</label>
-                      <select
-                        value={selectedSeoCategory}
-                        onChange={(e) => setSelectedSeoCategory(e.target.value)}
-                        className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      >
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>)}
-                      </select>
-                    </div>
-                    <button
-                      onClick={handleRunCategoryManagerSeo}
-                      disabled={isRunningSeoCategoryManager || categories.length === 0}
-                      className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded shadow transition disabled:opacity-50 flex items-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-sm">auto_stories</span>
-                      {isRunningSeoCategoryManager ? "Optimizing..." : "Run Optimization"}
-                    </button>
-                  </div>
-
-                  {seoCategoryManagerResult && (
-                    <div className="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <h4 className="text-sm font-bold text-gray-700 mb-2">Generation Result Preview (Saved):</h4>
-                      <div className="max-h-60 overflow-y-auto border border-gray-300 bg-white p-3 rounded text-xs font-mono text-gray-800 whitespace-pre-wrap">
-                        {seoCategoryManagerResult}
+                  {/* Right Column: Execute & Preview */}
+                  <div className="flex flex-col gap-4">
+                    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                      <label className="block text-sm font-bold text-gray-800 mb-3">2. Select Target & Run</label>
+                      <div className="flex flex-col gap-3">
+                        <select
+                          value={selectedSeoCategory}
+                          onChange={(e) => setSelectedSeoCategory(e.target.value)}
+                          className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        >
+                          {categories.map(c => <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>)}
+                        </select>
+                        <button
+                          onClick={handleRunCategoryManagerSeo}
+                          disabled={isRunningSeoCategoryManager || categories.length === 0}
+                          className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-6 rounded shadow transition disabled:opacity-50 flex items-center justify-center gap-2 w-full"
+                        >
+                          <span className="material-symbols-outlined text-sm">auto_stories</span>
+                          {isRunningSeoCategoryManager ? "Optimizing..." : "Run Optimization"}
+                        </button>
                       </div>
                     </div>
-                  )}
+
+                    <div className="flex-grow bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-inner flex flex-col">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="text-sm font-bold text-gray-800">3. Output Preview:</h4>
+                        {selectedSeoCategory && categories.find(c => c.id === selectedSeoCategory) && (
+                          <div className="flex gap-2">
+                            <a 
+                              href={`http://localhost:3000/en/category/${categories.find(c => c.id === selectedSeoCategory)?.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded"
+                            >
+                              EN
+                            </a>
+                            <a 
+                              href={`http://localhost:3000/fr/category/${categories.find(c => c.id === selectedSeoCategory)?.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded"
+                            >
+                              FR
+                            </a>
+                            <a 
+                              href={`http://localhost:3000/es/category/${categories.find(c => c.id === selectedSeoCategory)?.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded"
+                            >
+                              ES
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-grow overflow-y-auto border border-gray-300 bg-white p-3 rounded text-xs font-mono text-gray-800 whitespace-pre-wrap">
+                        {seoCategoryManagerResult ? seoCategoryManagerResult : <span className="text-gray-400 italic">No output yet. Select a target and run the optimization.</span>}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {seoActiveTab === "categories" && (
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-sm font-bold text-gray-700">Category Meta SEO Prompt</label>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Prompt Editor */}
+                  <div className="flex flex-col bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="block text-sm font-bold text-gray-800">1. Edit Meta SEO Prompt</label>
                       <button
                         onClick={() => handleSavePrompt("prompt_categories", promptCategories)}
-                        className="bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold py-1.5 px-4 rounded shadow transition"
+                        className="bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold py-1.5 px-3 rounded shadow transition"
                       >
                         Save Prompt
                       </button>
@@ -1903,61 +2149,103 @@ export default function Home() {
                       value={promptCategories}
                       onChange={(e) => setPromptCategories(e.target.value)}
                       placeholder="System prompt for category meta tags..."
-                      rows={8}
-                      className="w-full border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                      className="w-full flex-grow border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm min-h-[250px]"
                     />
-                    <span className="text-[10.5px] text-gray-400">Use <code>{`{title}`}</code> as a dynamic placeholder for the Category Name.</span>
+                    <span className="text-[10.5px] text-gray-500 mt-2">Use <code>{`{title}`}</code> as a dynamic placeholder for the Category Name.</span>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-100 flex flex-col md:flex-row gap-4 items-end">
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Target Category</label>
-                      <select
-                        value={selectedSeoCategory}
-                        onChange={(e) => setSelectedSeoCategory(e.target.value)}
-                        className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      >
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>)}
-                      </select>
+                  {/* Right Column: Execute & Preview */}
+                  <div className="flex flex-col gap-4">
+                    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                      <label className="block text-sm font-bold text-gray-800 mb-3">2. Select Target & Run</label>
+                      <div className="flex flex-col gap-3">
+                        <select
+                          value={selectedSeoCategory}
+                          onChange={(e) => setSelectedSeoCategory(e.target.value)}
+                          className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        >
+                          {categories.map(c => <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>)}
+                        </select>
+                        <button
+                          onClick={handleRunCategoryMetaSeo}
+                          disabled={isRunningSeoCategoryMeta || categories.length === 0}
+                          className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-6 rounded shadow transition disabled:opacity-50 flex items-center justify-center gap-2 w-full"
+                        >
+                          <span className="material-symbols-outlined text-sm">auto_stories</span>
+                          {isRunningSeoCategoryMeta ? "Optimizing..." : "Run Optimization"}
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={handleRunCategoryMetaSeo}
-                      disabled={isRunningSeoCategoryMeta || categories.length === 0}
-                      className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded shadow transition disabled:opacity-50 flex items-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-sm">auto_stories</span>
-                      {isRunningSeoCategoryMeta ? "Optimizing..." : "Run Optimization"}
-                    </button>
-                  </div>
 
-                  {seoCategoryMetaResult && (
-                    <div className="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3">
-                      <h4 className="text-sm font-bold text-gray-700 border-b pb-1">Generation Result Preview (Saved):</h4>
-                      <div>
-                        <span className="block text-xs font-bold text-gray-600 uppercase">SEO Page Title:</span>
-                        <div className="bg-white border p-2 rounded text-sm text-gray-800 mt-1">{seoCategoryMetaResult.title}</div>
+                    <div className="flex-grow bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-inner flex flex-col space-y-3">
+                      <div className="flex justify-between items-center border-b pb-2">
+                        <h4 className="text-sm font-bold text-gray-800">3. Output Preview:</h4>
+                        {selectedSeoCategory && categories.find(c => c.id === selectedSeoCategory) && (
+                          <div className="flex gap-2">
+                            <a 
+                              href={`http://localhost:3000/en/category/${categories.find(c => c.id === selectedSeoCategory)?.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded"
+                            >
+                              EN
+                            </a>
+                            <a 
+                              href={`http://localhost:3000/fr/category/${categories.find(c => c.id === selectedSeoCategory)?.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded"
+                            >
+                              FR
+                            </a>
+                            <a 
+                              href={`http://localhost:3000/es/category/${categories.find(c => c.id === selectedSeoCategory)?.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded"
+                            >
+                              ES
+                            </a>
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <span className="block text-xs font-bold text-gray-600 uppercase">SEO Meta Description:</span>
-                        <div className="bg-white border p-2 rounded text-sm text-gray-800 mt-1">{seoCategoryMetaResult.description}</div>
-                      </div>
-                      <div>
-                        <span className="block text-xs font-bold text-gray-600 uppercase">SEO Keywords:</span>
-                        <div className="bg-white border p-2 rounded text-sm text-gray-800 mt-1 font-mono">{seoCategoryMetaResult.keywords}</div>
-                      </div>
+                      
+                      {!seoCategoryMetaResult && (
+                        <div className="flex-grow flex items-center justify-center">
+                          <span className="text-gray-400 italic text-xs">No output yet. Select a target and run the optimization.</span>
+                        </div>
+                      )}
+                      
+                      {seoCategoryMetaResult && (
+                        <div className="space-y-3 flex-grow overflow-y-auto">
+                          <div>
+                            <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">SEO Page Title:</span>
+                            <div className="bg-white border p-2.5 rounded text-sm text-gray-800 font-medium">{seoCategoryMetaResult.title}</div>
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">SEO Meta Description:</span>
+                            <div className="bg-white border p-2.5 rounded text-sm text-gray-800 leading-relaxed">{seoCategoryMetaResult.description}</div>
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">SEO Keywords:</span>
+                            <div className="bg-white border p-2.5 rounded text-sm text-purple-700 font-mono tracking-tight">{seoCategoryMetaResult.keywords}</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
 
               {seoActiveTab === "games" && (
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-sm font-bold text-gray-700">Game Meta SEO Prompt</label>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Prompt Editor */}
+                  <div className="flex flex-col bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="block text-sm font-bold text-gray-800">1. Edit Game Meta SEO Prompt</label>
                       <button
                         onClick={() => handleSavePrompt("prompt_games", promptGames)}
-                        className="bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold py-1.5 px-4 rounded shadow transition"
+                        className="bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold py-1.5 px-3 rounded shadow transition"
                       >
                         Save Prompt
                       </button>
@@ -1966,46 +2254,87 @@ export default function Home() {
                       value={promptGames}
                       onChange={(e) => setPromptGames(e.target.value)}
                       placeholder="System prompt for game rewritten description and tags..."
-                      rows={8}
-                      className="w-full border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                      className="w-full flex-grow border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm min-h-[400px]"
                     />
-                    <span className="text-[10.5px] text-gray-400">Use <code>{`{title}`}</code> and <code>{`{description}`}</code> as dynamic placeholders.</span>
+                    <span className="text-[10.5px] text-gray-500 mt-2">Use <code>{`{title}`}</code> and <code>{`{description}`}</code> as dynamic placeholders.</span>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-100 flex flex-col md:flex-row gap-4 items-end">
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Target Game</label>
-                      <select
-                        value={selectedSeoGame}
-                        onChange={(e) => setSelectedSeoGame(e.target.value)}
-                        className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      >
-                        {games.map(g => <option key={g.id} value={g.id}>{g.title} ({g.category})</option>)}
-                      </select>
+                  {/* Right Column: Execute & Preview */}
+                  <div className="flex flex-col gap-4">
+                    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                      <label className="block text-sm font-bold text-gray-800 mb-3">2. Select Target & Run</label>
+                      <div className="flex flex-col gap-3">
+                        <select
+                          value={selectedSeoGame}
+                          onChange={(e) => setSelectedSeoGame(e.target.value)}
+                          className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        >
+                          {games.map(g => <option key={g.id} value={g.id}>{g.title} ({g.category})</option>)}
+                        </select>
+                        <button
+                          onClick={handleRunGameMetaSeo}
+                          disabled={isRunningSeoGameMeta || games.length === 0}
+                          className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-6 rounded shadow transition disabled:opacity-50 flex items-center justify-center gap-2 w-full"
+                        >
+                          <span className="material-symbols-outlined text-sm">auto_stories</span>
+                          {isRunningSeoGameMeta ? "Optimizing..." : "Run Optimization"}
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={handleRunGameMetaSeo}
-                      disabled={isRunningSeoGameMeta || games.length === 0}
-                      className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded shadow transition disabled:opacity-50 flex items-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-sm">auto_stories</span>
-                      {isRunningSeoGameMeta ? "Optimizing..." : "Run Optimization"}
-                    </button>
-                  </div>
 
-                  {seoGameMetaResult && (
-                    <div className="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3">
-                      <h4 className="text-sm font-bold text-gray-700 border-b pb-1">Generation Result Preview (Saved):</h4>
-                      <div>
-                        <span className="block text-xs font-bold text-gray-600 uppercase">Optimized Game Description:</span>
-                        <div className="bg-white border p-2 rounded text-sm text-gray-800 mt-1 whitespace-pre-wrap">{seoGameMetaResult.description}</div>
+                    <div className="flex-grow bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-inner flex flex-col space-y-3">
+                      <div className="flex justify-between items-center border-b pb-2">
+                        <h4 className="text-sm font-bold text-gray-800">3. Output Preview:</h4>
+                        {selectedSeoGame && games.find(g => g.id === selectedSeoGame) && (
+                          <div className="flex gap-2">
+                            <a 
+                              href={`http://localhost:3000/en/game/${games.find(g => g.id === selectedSeoGame)?.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded"
+                            >
+                              EN
+                            </a>
+                            <a 
+                              href={`http://localhost:3000/fr/game/${games.find(g => g.id === selectedSeoGame)?.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded"
+                            >
+                              FR
+                            </a>
+                            <a 
+                              href={`http://localhost:3000/es/game/${games.find(g => g.id === selectedSeoGame)?.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded"
+                            >
+                              ES
+                            </a>
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <span className="block text-xs font-bold text-gray-600 uppercase">SEO Keywords:</span>
-                        <div className="bg-white border p-2 rounded text-sm text-gray-800 mt-1 font-mono">{seoGameMetaResult.keywords}</div>
-                      </div>
+                      
+                      {!seoGameMetaResult && (
+                        <div className="flex-grow flex items-center justify-center">
+                          <span className="text-gray-400 italic text-xs">No output yet. Select a target and run the optimization.</span>
+                        </div>
+                      )}
+                      
+                      {seoGameMetaResult && (
+                        <div className="space-y-3 flex-grow overflow-y-auto">
+                          <div>
+                            <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Optimized Game Description:</span>
+                            <div className="bg-white border p-2.5 rounded text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{seoGameMetaResult.description}</div>
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">SEO Keywords:</span>
+                            <div className="bg-white border p-2.5 rounded text-sm text-purple-700 font-mono tracking-tight">{seoGameMetaResult.keywords}</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
             </section>
@@ -2153,15 +2482,65 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Google Gemini API Keys (Rotate)</label>
-                  <textarea
-                    value={geminiKey}
-                    onChange={(e) => setGeminiKey(e.target.value)}
-                    placeholder="AIzaSy...&#10;AIzaSy..."
-                    rows={3}
-                    className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  />
-                  <p className="text-[11px] text-gray-400 mt-1">Enter one or more keys (one per line) to rotate API access.</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">AI Provider Configuration</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Active AI Provider</label>
+                      <select
+                        value={aiProvider}
+                        onChange={(e) => setAiProvider(e.target.value)}
+                        className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                      >
+                        <option value="gemini">Google Gemini (GenAI)</option>
+                        <option value="openrouter">OpenRouter (Any Model)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Google Gemini API Keys (Rotate)</label>
+                    <textarea
+                      value={geminiKey}
+                      onChange={(e) => setGeminiKey(e.target.value)}
+                      placeholder="AIzaSy...&#10;AIzaSy..."
+                      rows={3}
+                      className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">Enter one or more keys (one per line) to rotate API access.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">OpenRouter API Key</label>
+                    <input
+                      type="password"
+                      value={openrouterKey}
+                      onChange={(e) => setOpenrouterKey(e.target.value)}
+                      placeholder="sk-or-v1-..."
+                      className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm mb-2"
+                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">OpenRouter Model</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={openrouterModel}
+                        onChange={(e) => setOpenrouterModel(e.target.value)}
+                        className="flex-1 border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white truncate"
+                      >
+                        <option value="">{openrouterModel || "Select a model..."}</option>
+                        {openrouterModels.map((m: any) => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.id})</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleFetchModels}
+                        disabled={fetchingModels}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-3 rounded shadow-sm text-xs disabled:opacity-50"
+                      >
+                        {fetchingModels ? "..." : "Fetch"}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1">Select the model to use for SEO & descriptions.</p>
+                  </div>
                 </div>
 
                 {/* Description toggle */}

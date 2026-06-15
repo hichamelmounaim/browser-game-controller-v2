@@ -7,6 +7,43 @@ import {
   DEFAULT_PROMPT_GAMES
 } from '@/lib/constants';
 
+async function generateAIResponse(prompt: string): Promise<string> {
+  const aiProvider = getSetting('ai_provider') || 'gemini';
+  
+  if (aiProvider === 'openrouter') {
+    const openrouterKey = getSetting('openrouter_api_key');
+    const openrouterModel = getSetting('openrouter_model') || 'google/gemini-2.5-flash';
+    if (!openrouterKey) throw new Error('No OpenRouter API key found');
+    
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openrouterKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: openrouterModel,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'OpenRouter API Error');
+    return data.choices?.[0]?.message?.content || '';
+  } else {
+    const keysString = getSetting('gemini_api_key');
+    if (!keysString) throw new Error('No Gemini API keys found in Settings');
+    const apiKeys = keysString.split(/[\n,]+/).map(k => k.trim()).filter(k => k.length > 0);
+    if (apiKeys.length === 0) throw new Error('No valid Gemini API keys found');
+    const randomKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
+    const ai = new GoogleGenAI({ apiKey: randomKey });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    return response.text || '';
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { title, description, type } = await req.json();
@@ -14,33 +51,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Title/Name is required' }, { status: 400 });
     }
 
-    const keysString = getSetting('gemini_api_key');
-    if (!keysString) {
-      return NextResponse.json({ error: 'No Gemini API keys found in Settings' }, { status: 400 });
-    }
-
-    const apiKeys = keysString
-      .split(/[\n,]+/)
-      .map(k => k.trim())
-      .filter(k => k.length > 0);
-
-    if (apiKeys.length === 0) {
-      return NextResponse.json({ error: 'No valid Gemini API keys found' }, { status: 400 });
-    }
-
-    const randomKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
-    const ai = new GoogleGenAI({ apiKey: randomKey });
-    
     if (type === 'category_cu') {
       const dbPrompt = getSetting('prompt_category_manager');
       const prompt = (dbPrompt || DEFAULT_PROMPT_CATEGORY_MANAGER).replace(/{title}/g, title);
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
-
-      let text = response.text || '';
+      let text = await generateAIResponse(prompt);
       
       // Check for multilingual output format
       if (text.includes('CU_EN:') && text.includes('CU_FR:') && text.includes('CU_ES:')) {
@@ -77,12 +92,7 @@ export async function POST(req: Request) {
       const dbPrompt = getSetting('prompt_categories');
       const prompt = (dbPrompt || DEFAULT_PROMPT_CATEGORIES).replace(/{title}/g, title);
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
-
-      const text = response.text || '';
+      const text = await generateAIResponse(prompt);
       
       // Check for multilingual output format
       if (text.includes('SEO_TITLE_EN:') && text.includes('SEO_TITLE_FR:') && text.includes('SEO_TITLE_ES:')) {
@@ -144,12 +154,7 @@ export async function POST(req: Request) {
         .replace(/{title}/g, title)
         .replace(/{description}/g, description || 'N/A');
       
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
-      
-      const text = response.text || '';
+      const text = await generateAIResponse(prompt);
       
       if (text.includes('EN_DESCRIPTION:') && text.includes('FR_DESCRIPTION:') && text.includes('ES_DESCRIPTION:')) {
         const getValue = (key: string, nextKey: string) => {
@@ -163,21 +168,40 @@ export async function POST(req: Request) {
           return match ? match[1].trim() : '';
         };
 
+        const developer = getValue('DEVELOPER', 'RELEASE_DATE');
+        const releaseDate = getValue('RELEASE_DATE', 'SUPPORTED_DEVICES');
+        const supportedDevices = getValue('SUPPORTED_DEVICES', 'EN_SHORT_DESC');
+
+        const shortDescEn = getValue('EN_SHORT_DESC', 'EN_CONTROLS');
+        const controlsEn = getValue('EN_CONTROLS', 'EN_DESCRIPTION');
         const descEn = getValue('EN_DESCRIPTION', 'EN_KEYWORDS');
-        const keywordsEn = getValue('EN_KEYWORDS', 'FR_DESCRIPTION');
+        const keywordsEn = getValue('EN_KEYWORDS', 'FR_SHORT_DESC');
         
+        const shortDescFr = getValue('FR_SHORT_DESC', 'FR_CONTROLS');
+        const controlsFr = getValue('FR_CONTROLS', 'FR_DESCRIPTION');
         const descFr = getValue('FR_DESCRIPTION', 'FR_KEYWORDS');
-        const keywordsFr = getValue('FR_KEYWORDS', 'ES_DESCRIPTION');
+        const keywordsFr = getValue('FR_KEYWORDS', 'ES_SHORT_DESC');
         
+        const shortDescEs = getValue('ES_SHORT_DESC', 'ES_CONTROLS');
+        const controlsEs = getValue('ES_CONTROLS', 'ES_DESCRIPTION');
         const descEs = getValue('ES_DESCRIPTION', 'ES_KEYWORDS');
         const keywordsEs = getEndValue('ES_KEYWORDS');
 
         return NextResponse.json({
           success: true,
+          developer: developer || 'Z & K Games',
+          release_date: releaseDate || 'March 2024',
+          supported_devices: supportedDevices || 'Desktop, phone and tablet',
+          short_description: shortDescEn,
+          controls: controlsEn,
           description: descEn,
           keywords: keywordsEn,
+          short_description_fr: shortDescFr,
+          controls_fr: controlsFr,
           description_fr: descFr,
           keywords_fr: keywordsFr,
+          short_description_es: shortDescEs,
+          controls_es: controlsEs,
           description_es: descEs,
           keywords_es: keywordsEs
         });

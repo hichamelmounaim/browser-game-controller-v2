@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { scrapeGame } from '@/lib/scraper';
+import { exportLocalJSON } from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
@@ -9,6 +10,7 @@ export async function POST(req: Request) {
     }
     
     await scrapeGame(url, category || 'Uncategorized');
+    exportLocalJSON();
     
     return NextResponse.json({ success: true, message: 'Game scraped successfully' });
   } catch (error: any) {

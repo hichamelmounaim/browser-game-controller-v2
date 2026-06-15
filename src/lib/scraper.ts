@@ -204,23 +204,13 @@ export async function scrapeGame(url: string, selectedCategory: string = 'Uncate
   let categoryFr = '';
   let categoryEs = '';
   
-  try {
-    const keysString = getSetting('gemini_api_key');
-    if (keysString) {
-      const apiKeys = keysString
-        .split(/[\n,]+/)
-        .map(k => k.trim())
-        .filter(k => k.length > 0);
-
-      if (apiKeys.length > 0) {
-        const randomKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
-        console.log(`Gemini API keys found (${apiKeys.length} available). Rotating for multilingual generation...`);
-        const ai = new GoogleGenAI({ apiKey: randomKey });
-        const useOriginalDescription = getSetting('use_original_description') === 'true';
-        let prompt = '';
-        
-        if (useOriginalDescription) {
-          prompt = `You are an expert translator for a global gaming portal.
+    try {
+      const aiProvider = getSetting('ai_provider') || 'gemini';
+      const useOriginalDescription = getSetting('use_original_description') === 'true';
+      let prompt = '';
+      
+      if (useOriginalDescription) {
+        prompt = `You are an expert translator for a global gaming portal.
 Game Title: ${title}
 Original Description: ${description}
 
@@ -251,8 +241,8 @@ TITLE_FR:
 [French title]
 TITLE_ES:
 [Spanish title]`;
-        } else {
-          prompt = `You are an expert SEO copywriter for a global gaming portal.
+      } else {
+        prompt = `You are an expert SEO copywriter for a global gaming portal.
 Game Title: ${title}
 Original Description: ${description}
 
@@ -289,14 +279,51 @@ TITLE_FR:
 [French title]
 TITLE_ES:
 [Spanish title]`;
-        }
-      
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
+      }
+    
+      let text = '';
+      if (aiProvider === 'openrouter') {
+        const openrouterKey = getSetting('openrouter_api_key');
+        const openrouterModel = getSetting('openrouter_model') || 'google/gemini-2.5-flash';
+        if (!openrouterKey) throw new Error('No OpenRouter API key found');
+        
+        console.log(`Using OpenRouter API with model ${openrouterModel} for multilingual generation...`);
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${openrouterKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: openrouterModel,
+            messages: [{ role: "user", content: prompt }]
+          })
         });
-      
-        const text = response.text || '';
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'OpenRouter API Error');
+        text = data.choices?.[0]?.message?.content || '';
+      } else {
+        const keysString = getSetting('gemini_api_key');
+        if (keysString) {
+          const apiKeys = keysString
+            .split(/[\n,]+/)
+            .map(k => k.trim())
+            .filter(k => k.length > 0);
+
+          if (apiKeys.length > 0) {
+            const randomKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
+            console.log(`Gemini API keys found (${apiKeys.length} available). Rotating for multilingual generation...`);
+            const ai = new GoogleGenAI({ apiKey: randomKey });
+            
+            const response = await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: prompt,
+            });
+            text = response.text || '';
+          }
+        }
+      }
+
         if (text.includes('FR_DESCRIPTION:') && text.includes('ES_DESCRIPTION:')) {
           const getValue = (key: string, nextKey: string) => {
             const regex = new RegExp(`${key}:\\s*([\\s\\S]*?)${nextKey}`);
@@ -335,11 +362,9 @@ TITLE_ES:
           
           console.log(`AI Multilingual Optimization successful! Category: ${finalCategory} (FR: ${categoryFr}, ES: ${categoryEs}), Titles: (FR: ${titleFr}, ES: ${titleEs})`);
         }
-      }
+    } catch (aiError) {
+      console.error('AI Multilingual Optimization failed, falling back:', aiError);
     }
-  } catch (aiError) {
-    console.error('AI Multilingual Optimization failed, falling back:', aiError);
-  }
 
   // Auto-create Category if it doesn't exist
   const catSlug = finalCategory.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
