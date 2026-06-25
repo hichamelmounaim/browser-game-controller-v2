@@ -52,17 +52,20 @@ SEO_DESC_ES:
 SEO_KEYWORDS_ES:
 [Spanish keywords]`;
 
-export const DEFAULT_PROMPT_GAMES = `You are an expert SEO copywriter for a global gaming portal.
+export const DEFAULT_PROMPT_GAMES = `You are an expert SEO copywriter and gaming journalist for a global gaming portal.
 Game Title: {title}
 Original Description: {description}
 
-Task: Generate rich SEO metadata and content for this game in English, French, and Spanish.
+Task: Generate rich SEO metadata and editorial content for this game in English, French, and Spanish. This content is crucial to avoid "replicated content" flags on AdSense, so it MUST be highly unique, engaging, and add substantial editorial value beyond the original description.
 
 Requirements:
 - SHORT_DESC: 1 or 2 brief sentences (max 150 characters) describing the core gameplay.
-- DESCRIPTION: A detailed description using semantic HTML formatting (no markdown code blocks, just raw HTML). It MUST include specific sections structured with <h3> tags answering: "How to play {title}?", "Who created {title}?", "How can I play {title} for free?", and "Can I play {title} on mobile devices and desktop?". Provide a well-written paragraph for each.
+- DESCRIPTION: A detailed description using semantic HTML formatting (no markdown code blocks, just raw HTML).
+- EDITORIAL_REVIEW: A unique, engaging 2-3 paragraph editorial review of the game, analyzing its graphics, gameplay loop, and what makes it fun or unique. Use plain text or basic HTML.
+- HOW_TO_PLAY: Specific instructions and objectives for the game. (e.g. "In {title}, your goal is to...")
+- TIPS: 3 bullet points (using <ul><li>) with strategic tips and tricks to help players succeed.
 - KEYWORDS: A comma-separated list of 10 relevant SEO terms.
-- DEVELOPER: The name of the developer/studio (if unknown, infer or use a plausible studio name like "Z & K Games" or "Pixel Studios").
+- DEVELOPER: The name of the developer/studio (if unknown, infer or use a plausible studio name like "Z & K Games").
 - CONTROLS: A short description of the controls (e.g., "WASD or arrow keys to move").
 - SUPPORTED_DEVICES: "Desktop, phone and tablet".
 - RELEASE_DATE: A plausible release date (e.g., "March 2024").
@@ -81,6 +84,12 @@ EN_CONTROLS:
 [English controls]
 EN_DESCRIPTION:
 [English rich HTML description]
+EN_EDITORIAL_REVIEW:
+[English editorial review]
+EN_HOW_TO_PLAY:
+[English how to play]
+EN_TIPS:
+[English tips and tricks]
 EN_KEYWORDS:
 [English keywords]
 
@@ -90,6 +99,12 @@ FR_CONTROLS:
 [French controls]
 FR_DESCRIPTION:
 [French rich HTML description]
+FR_EDITORIAL_REVIEW:
+[French editorial review]
+FR_HOW_TO_PLAY:
+[French how to play]
+FR_TIPS:
+[French tips and tricks]
 FR_KEYWORDS:
 [French keywords]
 
@@ -99,6 +114,12 @@ ES_CONTROLS:
 [Spanish controls]
 ES_DESCRIPTION:
 [Spanish rich HTML description]
+ES_EDITORIAL_REVIEW:
+[Spanish editorial review]
+ES_HOW_TO_PLAY:
+[Spanish how to play]
+ES_TIPS:
+[Spanish tips and tricks]
 ES_KEYWORDS:
 [Spanish keywords]`;
 

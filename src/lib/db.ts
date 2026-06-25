@@ -29,6 +29,15 @@ export function initDB() {
       seo_keywords TEXT,
       seo_keywords_fr TEXT,
       seo_keywords_es TEXT,
+      editorial_review TEXT,
+      editorial_review_fr TEXT,
+      editorial_review_es TEXT,
+      how_to_play TEXT,
+      how_to_play_fr TEXT,
+      how_to_play_es TEXT,
+      tips TEXT,
+      tips_fr TEXT,
+      tips_es TEXT,
       rating REAL DEFAULT 4.5,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -114,6 +123,15 @@ export function initDB() {
     { table: 'games', col: 'description_es', type: 'TEXT' },
     { table: 'games', col: 'seo_keywords_fr', type: 'TEXT' },
     { table: 'games', col: 'seo_keywords_es', type: 'TEXT' },
+    { table: 'games', col: 'editorial_review', type: 'TEXT' },
+    { table: 'games', col: 'editorial_review_fr', type: 'TEXT' },
+    { table: 'games', col: 'editorial_review_es', type: 'TEXT' },
+    { table: 'games', col: 'how_to_play', type: 'TEXT' },
+    { table: 'games', col: 'how_to_play_fr', type: 'TEXT' },
+    { table: 'games', col: 'how_to_play_es', type: 'TEXT' },
+    { table: 'games', col: 'tips', type: 'TEXT' },
+    { table: 'games', col: 'tips_fr', type: 'TEXT' },
+    { table: 'games', col: 'tips_es', type: 'TEXT' },
     { table: 'categories', col: 'content_unit_fr', type: 'TEXT' },
     { table: 'categories', col: 'content_unit_es', type: 'TEXT' },
     { table: 'categories', col: 'seo_title_fr', type: 'TEXT' },
@@ -209,6 +227,15 @@ export interface Game {
   seo_keywords: string;
   seo_keywords_fr?: string;
   seo_keywords_es?: string;
+  editorial_review?: string;
+  editorial_review_fr?: string;
+  editorial_review_es?: string;
+  how_to_play?: string;
+  how_to_play_fr?: string;
+  how_to_play_es?: string;
+  tips?: string;
+  tips_fr?: string;
+  tips_es?: string;
   rating: number;
   description_source?: string;
   created_at: string;
@@ -247,11 +274,13 @@ export function insertGame(game: Omit<Game, 'created_at' | 'rating'>) {
     INSERT OR REPLACE INTO games (
       id, title, title_fr, title_es, slug, description, description_fr, description_es,
       thumbnail, category, source_url, iframe_url, seo_keywords, seo_keywords_fr, seo_keywords_es,
+      editorial_review, editorial_review_fr, editorial_review_es, how_to_play, how_to_play_fr, how_to_play_es, tips, tips_fr, tips_es,
       description_source
     )
     VALUES (
       @id, @title, @title_fr, @title_es, @slug, @description, @description_fr, @description_es,
       @thumbnail, @category, @source_url, @iframe_url, @seo_keywords, @seo_keywords_fr, @seo_keywords_es,
+      @editorial_review, @editorial_review_fr, @editorial_review_es, @how_to_play, @how_to_play_fr, @how_to_play_es, @tips, @tips_fr, @tips_es,
       @description_source
     )
   `);

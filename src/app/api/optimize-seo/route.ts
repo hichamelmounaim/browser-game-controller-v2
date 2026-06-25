@@ -174,17 +174,26 @@ export async function POST(req: Request) {
 
         const shortDescEn = getValue('EN_SHORT_DESC', 'EN_CONTROLS');
         const controlsEn = getValue('EN_CONTROLS', 'EN_DESCRIPTION');
-        const descEn = getValue('EN_DESCRIPTION', 'EN_KEYWORDS');
+        const descEn = getValue('EN_DESCRIPTION', 'EN_EDITORIAL_REVIEW');
+        const editorialEn = getValue('EN_EDITORIAL_REVIEW', 'EN_HOW_TO_PLAY');
+        const howToPlayEn = getValue('EN_HOW_TO_PLAY', 'EN_TIPS');
+        const tipsEn = getValue('EN_TIPS', 'EN_KEYWORDS');
         const keywordsEn = getValue('EN_KEYWORDS', 'FR_SHORT_DESC');
         
         const shortDescFr = getValue('FR_SHORT_DESC', 'FR_CONTROLS');
         const controlsFr = getValue('FR_CONTROLS', 'FR_DESCRIPTION');
-        const descFr = getValue('FR_DESCRIPTION', 'FR_KEYWORDS');
+        const descFr = getValue('FR_DESCRIPTION', 'FR_EDITORIAL_REVIEW');
+        const editorialFr = getValue('FR_EDITORIAL_REVIEW', 'FR_HOW_TO_PLAY');
+        const howToPlayFr = getValue('FR_HOW_TO_PLAY', 'FR_TIPS');
+        const tipsFr = getValue('FR_TIPS', 'FR_KEYWORDS');
         const keywordsFr = getValue('FR_KEYWORDS', 'ES_SHORT_DESC');
         
         const shortDescEs = getValue('ES_SHORT_DESC', 'ES_CONTROLS');
         const controlsEs = getValue('ES_CONTROLS', 'ES_DESCRIPTION');
-        const descEs = getValue('ES_DESCRIPTION', 'ES_KEYWORDS');
+        const descEs = getValue('ES_DESCRIPTION', 'ES_EDITORIAL_REVIEW');
+        const editorialEs = getValue('ES_EDITORIAL_REVIEW', 'ES_HOW_TO_PLAY');
+        const howToPlayEs = getValue('ES_HOW_TO_PLAY', 'ES_TIPS');
+        const tipsEs = getValue('ES_TIPS', 'ES_KEYWORDS');
         const keywordsEs = getEndValue('ES_KEYWORDS');
 
         return NextResponse.json({
@@ -195,14 +204,23 @@ export async function POST(req: Request) {
           short_description: shortDescEn,
           controls: controlsEn,
           description: descEn,
+          editorial_review: editorialEn,
+          how_to_play: howToPlayEn,
+          tips: tipsEn,
           keywords: keywordsEn,
           short_description_fr: shortDescFr,
           controls_fr: controlsFr,
           description_fr: descFr,
+          editorial_review_fr: editorialFr,
+          how_to_play_fr: howToPlayFr,
+          tips_fr: tipsFr,
           keywords_fr: keywordsFr,
           short_description_es: shortDescEs,
           controls_es: controlsEs,
           description_es: descEs,
+          editorial_review_es: editorialEs,
+          how_to_play_es: howToPlayEs,
+          tips_es: tipsEs,
           keywords_es: keywordsEs
         });
       } else if (text.includes('DESCRIPTION:') && text.includes('KEYWORDS:')) {

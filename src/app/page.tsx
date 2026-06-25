@@ -125,12 +125,14 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("scraper");
   const [translationFilter, setTranslationFilter] = useState("all");
   const [descSourceFilter, setDescSourceFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [gamesPerPage, setGamesPerPage] = useState(50);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, categoryFilter, seoFilter, schemaFilter, translationFilter, descSourceFilter]);
+  }, [searchTerm, categoryFilter, seoFilter, schemaFilter, translationFilter, descSourceFilter, sourceFilter]);
+  useEffect(() => {
     fetchSettings();
     fetchGames();
     fetchCategories();
@@ -1188,12 +1190,18 @@ export default function Home() {
     if (descSourceFilter === "original") matchesDescSource = game.description_source === 'original' || !game.description_source;
     else if (descSourceFilter === "rewritten") matchesDescSource = game.description_source === 'rewritten';
 
+    let matchesSource = true;
+    if (sourceFilter === "crazygames") matchesSource = game.source_url?.includes("crazygames.com");
+    else if (sourceFilter === "poki") matchesSource = game.source_url?.includes("poki.com");
+    else if (sourceFilter === "gamemonetize") matchesSource = game.source_url?.includes("gamemonetize.com");
+    else if (sourceFilter === "other") matchesSource = !game.source_url?.includes("crazygames.com") && !game.source_url?.includes("poki.com") && !game.source_url?.includes("gamemonetize.com");
+
     const hasSchema = game.description && game.description.length > 0 && game.rating !== undefined;
     const matchesSchema = schemaFilter === "all" || 
                          (schemaFilter === "active" && hasSchema) || 
                          (schemaFilter === "inactive" && !hasSchema);
 
-    return matchesSearch && matchesCategory && matchesSeo && matchesSchema && matchesTranslation && matchesDescSource;
+    return matchesSearch && matchesCategory && matchesSeo && matchesSchema && matchesTranslation && matchesDescSource && matchesSource;
   });
 
   const totalPages = Math.ceil(filteredGames.length / gamesPerPage);
@@ -1748,7 +1756,7 @@ export default function Home() {
               )}
 
               {/* GAMES FILTERS */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Search</label>
                   <input
@@ -1816,6 +1824,20 @@ export default function Home() {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Source</label>
+                  <select
+                    value={sourceFilter}
+                    onChange={(e) => setSourceFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                  >
+                    <option value="all">All Sources</option>
+                    <option value="gamemonetize">Game Monetize</option>
+                    <option value="crazygames">CrazyGames</option>
+                    <option value="poki">Poki</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Schema Status</label>
                   <select
                     value={schemaFilter}
@@ -1852,6 +1874,7 @@ export default function Home() {
                       <th className="p-3 font-semibold">Thumbnail</th>
                       <th className="p-3 font-semibold">Title</th>
                       <th className="p-3 font-semibold">Category</th>
+                      <th className="p-3 font-semibold">Source</th>
                       <th className="p-3 font-semibold">SEO (EN/FR/ES)</th>
                       <th className="p-3 font-semibold">Schema</th>
                       <th className="p-3 font-semibold">Actions</th>
@@ -1882,6 +1905,17 @@ export default function Home() {
                           <td className="p-3 font-medium">{game.title}</td>
                           <td className="p-3">
                             <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">{game.category}</span>
+                          </td>
+                          <td className="p-3">
+                            {game.source_url?.includes("crazygames.com") ? (
+                              <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-semibold">CrazyGames</span>
+                            ) : game.source_url?.includes("poki.com") ? (
+                              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-semibold">Poki</span>
+                            ) : game.source_url?.includes("gamemonetize.com") ? (
+                              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-semibold">GM</span>
+                            ) : (
+                              <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full font-semibold">Other</span>
+                            )}
                           </td>
                           <td className="p-3">
                             <div className="flex flex-col gap-1 text-xs">
