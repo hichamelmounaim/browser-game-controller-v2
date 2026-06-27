@@ -55,14 +55,63 @@ export async function POST() {
     
     const currentDate = new Date().toISOString().split('T')[0];
     const locales = ['en', 'fr', 'es'];
+
+    const getLocalizedPath = (
+      lang: string,
+      type: 'home' | 'category' | 'game' | 'new' | 'trending' | 'categories',
+      slug?: string
+    ): string => {
+      const mapping: Record<string, Record<string, string>> = {
+        en: {
+          home: '',
+          category: 'category',
+          game: 'game',
+          new: 'new',
+          trending: 'trending',
+          categories: 'categories',
+        },
+        fr: {
+          home: '',
+          category: 'categorie',
+          game: 'jeu',
+          new: 'nouveaux',
+          trending: 'tendances',
+          categories: 'categories',
+        },
+        es: {
+          home: '',
+          category: 'categoria',
+          game: 'juego',
+          new: 'nuevos',
+          trending: 'tendencias',
+          categories: 'categorias',
+        },
+      };
+
+      const l = mapping[lang] ? lang : 'en';
+      const prefix = mapping[l][type];
+
+      if (type === 'home') {
+        return `/${l}`;
+      }
+      if (type === 'category' || type === 'game') {
+        return `/${l}/${prefix}/${slug || ''}`;
+      }
+      return `/${l}/${prefix}`;
+    };
     
-    const makeAlternates = (pagePath: string) => {
+    const makeAlternates = (
+      type: 'home' | 'category' | 'game' | 'new' | 'trending' | 'categories',
+      slug?: string
+    ) => {
       let lines = '';
       locales.forEach(l => {
-        lines += `    <xhtml:link rel="alternate" hreflang="${l}" href="${host}/${l}${pagePath}" />\n`;
+        const localizedPath = getLocalizedPath(l, type, slug);
+        lines += `    <xhtml:link rel="alternate" hreflang="${l}" href="${host}${localizedPath}" />\n`;
       });
       // x-default goes to English version
-      lines += `    <xhtml:link rel="alternate" hreflang="x-default" href="${host}/en${pagePath}" />\n`;
+      const defaultPath = getLocalizedPath('en', type, slug);
+      lines += `    <xhtml:link rel="alternate" hreflang="x-default" href="${host}${defaultPath}" />\n`;
       return lines;
     };
 
@@ -82,33 +131,34 @@ export async function POST() {
     categoriesXml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n`;
     
     const corePages = [
-      { path: '', priority: '1.0', changefreq: 'daily' },
-      { path: '/categories', priority: '0.8', changefreq: 'weekly' },
-      { path: '/new', priority: '0.9', changefreq: 'daily' },
-      { path: '/trending', priority: '0.9', changefreq: 'daily' }
-    ];
+      { type: 'home', priority: '1.0', changefreq: 'daily' },
+      { type: 'categories', priority: '0.8', changefreq: 'weekly' },
+      { type: 'new', priority: '0.9', changefreq: 'daily' },
+      { type: 'trending', priority: '0.9', changefreq: 'daily' }
+    ] as const;
     
     corePages.forEach(p => {
       locales.forEach(l => {
+        const localizedPath = getLocalizedPath(l, p.type);
         categoriesXml += `  <url>\n`;
-        categoriesXml += `    <loc>${host}/${l}${p.path}</loc>\n`;
+        categoriesXml += `    <loc>${host}${localizedPath}</loc>\n`;
         categoriesXml += `    <lastmod>${currentDate}</lastmod>\n`;
         categoriesXml += `    <changefreq>${p.changefreq}</changefreq>\n`;
         categoriesXml += `    <priority>${p.priority}</priority>\n`;
-        categoriesXml += makeAlternates(p.path);
+        categoriesXml += makeAlternates(p.type);
         categoriesXml += `  </url>\n`;
       });
     });
     
     categories.forEach(c => {
-      const pagePath = `/category/${c.slug}`;
       locales.forEach(l => {
+        const localizedPath = getLocalizedPath(l, 'category', c.slug);
         categoriesXml += `  <url>\n`;
-        categoriesXml += `    <loc>${host}/${l}${pagePath}</loc>\n`;
+        categoriesXml += `    <loc>${host}${localizedPath}</loc>\n`;
         categoriesXml += `    <lastmod>${currentDate}</lastmod>\n`;
         categoriesXml += `    <changefreq>daily</changefreq>\n`;
         categoriesXml += `    <priority>0.8</priority>\n`;
-        categoriesXml += makeAlternates(pagePath);
+        categoriesXml += makeAlternates('category', c.slug);
         categoriesXml += `  </url>\n`;
       });
     });
@@ -117,18 +167,18 @@ export async function POST() {
     fs.writeFileSync(path.join(sitemapsDir, 'sitemap-categories.xml'), categoriesXml, 'utf8');
 
     // 2. Generate Sharded Games Sitemaps (sitemap-games-X.xml)
-    const maxUrlsPerFile = 45000;
+    const maxUrlsPerFile = 2000;
     const gameUrls: string[] = [];
     
     games.forEach(g => {
-      const pagePath = `/game/${g.slug}`;
       locales.forEach(l => {
+        const localizedPath = getLocalizedPath(l, 'game', g.slug);
         let urlXml = `  <url>\n`;
-        urlXml += `    <loc>${host}/${l}${pagePath}</loc>\n`;
+        urlXml += `    <loc>${host}${localizedPath}</loc>\n`;
         urlXml += `    <lastmod>${currentDate}</lastmod>\n`;
         urlXml += `    <changefreq>weekly</changefreq>\n`;
         urlXml += `    <priority>0.7</priority>\n`;
-        urlXml += makeAlternates(pagePath);
+        urlXml += makeAlternates('game', g.slug);
         urlXml += `  </url>\n`;
         gameUrls.push(urlXml);
       });
